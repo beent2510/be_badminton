@@ -1,0 +1,42 @@
+<?php
+namespace App\Repositories;
+
+use App\Core\BasicRepository;
+use App\Models\CourtSchedule;
+
+class CourtScheduleRepository extends BasicRepository
+{
+    public function __construct(CourtSchedule $courtSchedule)
+    {
+        parent::__construct($courtSchedule);
+    }
+    public function search($params = [])
+    {
+        $query = $this->model->newQuery();
+
+        $courtId = $params['court_id'] ?? request()->get('court_id');
+        if (!empty($courtId)) {
+            $query->where('court_id', $courtId);
+        }
+
+         $dayOfWeek = $params['day_of_week'] ?? request()->get('day_of_week');
+        if (!empty($dayOfWeek)) {
+            $query->where('day_of_week', $dayOfWeek);
+        }
+
+         $isActive = $params['is_active'] ?? request()->get('is_active');
+        if (!is_null($isActive)) {
+            $query->where('is_active', filter_var($isActive, FILTER_VALIDATE_BOOLEAN));
+        }
+
+         return $this->paging($query);
+    }
+     public function store( $data)
+    {
+        return parent::store($data);
+    }
+     public function update($id, $data = [])
+    {
+        return parent::update($id, $data);
+    }
+}
