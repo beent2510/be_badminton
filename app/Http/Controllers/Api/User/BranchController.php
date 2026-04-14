@@ -21,4 +21,11 @@ class BranchController extends Controller
     {
         return $this->branchService->show($id);
     }
+
+    public function courts(Request $request, $id, \App\Services\CourtService $courtService)
+    {
+        $params = $request->all();
+        $params['branch_id'] = $id;
+        return $courtService->search($params);
+    }
 }

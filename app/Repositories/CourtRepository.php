@@ -22,6 +22,11 @@ class CourtRepository extends BasicRepository
             });
         }
 
+        $branchId = $params['branch_id'] ?? request()->get('branch_id');
+        if (!empty($branchId)) {
+            $query->where('branch_id', $branchId);
+        }
+
         return $this->paging($query);
     }
     public function store($data)

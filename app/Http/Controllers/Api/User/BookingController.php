@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\User;
 
 use App\Http\Controllers\Controller;
 use App\Services\BookingService;
+use App\Services\PromotionService;
 use Illuminate\Http\Request;
 
 class BookingController extends Controller
@@ -16,7 +17,9 @@ class BookingController extends Controller
     
         public function index(Request $request)
         {
-            return $this->bookingService->search($request->all());
+            $params = $request->all();
+            $params['user_id'] = $request->user()->id;
+            return $this->bookingService->search($params);
         }
     
         public function show($id)
@@ -48,8 +51,15 @@ class BookingController extends Controller
         /**
      * Đặt sân, kiểm tra trống và áp dụng mã giảm giá nếu có
      */
-    public function bookCourt(Request $request, \App\Services\PromotionService $promotionService)
+    public function bookCourt(Request $request, PromotionService $promotionService)
     {
+        $request->validate([
+            'court_id' => 'required',
+            'booking_date' => 'required',
+            'start_time' => 'required',
+            'end_time' => 'required',
+        ]);
+
         $data = $request->all();
         $result = $this->bookingService->bookCourt($data, $promotionService);
         if (!$result['success']) {

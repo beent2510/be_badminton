@@ -31,8 +31,9 @@ Route::prefix('admin')->group(function () {
 Route::prefix('user')->group(function () {
     Route::apiResource('courts', \App\Http\Controllers\Api\User\CourtController::class);
     Route::apiResource('branches', \App\Http\Controllers\Api\User\BranchController::class);
-    Route::post('bookings/book-court', [\App\Http\Controllers\Api\User\BookingController::class, 'bookCourt']);
-    Route::apiResource('bookings', \App\Http\Controllers\Api\User\BookingController::class);
+    Route::get('branches/{id}/courts', [\App\Http\Controllers\Api\User\BranchController::class, 'courts']);
+    Route::post('bookings/book-court', [\App\Http\Controllers\Api\User\BookingController::class, 'bookCourt'])->middleware('auth:api');
+    Route::apiResource('bookings', \App\Http\Controllers\Api\User\BookingController::class)->middleware('auth:api');
     Route::apiResource('reviews', \App\Http\Controllers\Api\User\ReviewtController::class);
     Route::apiResource('payments', \App\Http\Controllers\Api\User\PaymentController::class);
     Route::post('promotions/check-code', [\App\Http\Controllers\Api\User\PromotionController::class, 'checkCode']);
@@ -44,4 +45,6 @@ Route::prefix('auth')->group(function () {
     Route::post('register', [\App\Http\Controllers\Api\AuthController::class, 'register']);
     Route::post('login', [\App\Http\Controllers\Api\AuthController::class, 'login']);
     Route::post('logout', [\App\Http\Controllers\Api\AuthController::class, 'logout'])->middleware('auth:api');
+    Route::get('me', [\App\Http\Controllers\Api\AuthController::class, 'me'])->middleware('auth:api');
+    Route::put('profile', [\App\Http\Controllers\Api\AuthController::class, 'updateProfile'])->middleware('auth:api');
 });

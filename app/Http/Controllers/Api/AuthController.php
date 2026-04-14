@@ -46,4 +46,22 @@ class AuthController extends Controller
     {
         return response()->json($this->authService->logout());
     }
+
+    public function me(Request $request)
+    {
+        return response()->json($request->user());
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:255',
+        ]);
+        $result = $this->authService->updateProfile($user, $data);
+        return response()->json($result['user']);
+    }
 }

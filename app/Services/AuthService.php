@@ -47,6 +47,14 @@ class AuthService
         ];
     }
 
+    public function updateProfile($user, array $data)
+    {
+        $user = $this->authRepository->update($user, $data);
+        return [
+            'user' => $user,
+        ];
+    }
+
     public function logout()
     {
         return JWTAuth::logout();
