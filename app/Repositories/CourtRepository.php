@@ -27,8 +27,36 @@ class CourtRepository extends BasicRepository
             $query->where('branch_id', $branchId);
         }
 
+        $date = $params['date'] ?? request()->get('date');
+        if (!empty($date)) {
+            $query->with(['bookings' => function ($q) use ($date) {
+                // only get active/confirmed bookings, assuming 'status' != 'cancelled'
+                $q->where('booking_date', $date)->where('status', '!=', 'cancelled');
+            }]);
+        } else {
+            $query->with('bookings');
+        }
+
         return $this->paging($query);
     }
+
+    public function show($id)
+    {
+        $query = $this->model->newQuery();
+        
+        $date = request()->get('date');
+        if (!empty($date)) {
+            $query->with(['bookings' => function ($q) use ($date) {
+                // only get active/confirmed bookings, assuming 'status' != 'cancelled'
+                $q->where('booking_date', $date)->where('status', '!=', 'cancelled');
+            }]);
+        } else {
+            $query->with('bookings');
+        }
+
+        return $query->findOrFail($id);
+    }
+
     public function store($data)
     {
        if (isset($data['image_url']) && $data['image_url'] instanceof \Illuminate\Http\UploadedFile) {
