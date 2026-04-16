@@ -55,7 +55,7 @@ class BookingController extends Controller
     {
         $request->validate([
             'court_id' => 'required',
-            'booking_date' => 'required',
+            'booking_date' => 'required|date|after_or_equal:today',
             'start_time' => 'required',
             'end_time' => 'required',
         ]);

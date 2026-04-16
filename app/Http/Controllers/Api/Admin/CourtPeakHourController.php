@@ -15,7 +15,7 @@ class CourtPeakHourController extends Controller
 
     public function index(Request $request)
     {
-        return $this->courtPeakHourService->all($request->all());
+        return $this->courtPeakHourService->search($request->all());
     }
 
     public function show($id)

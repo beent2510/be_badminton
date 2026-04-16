@@ -52,7 +52,7 @@ class Promotion extends Model
         if (!$this->isValid()) {
             return $totalAmount;
         }
-        if ($this->discount_type === 'percent') {
+        if ($this->discount_type === 'percentage' || $this->discount_type === 'percent') {
             return max(0, $totalAmount - ($totalAmount * $this->discount_value / 100));
         } elseif ($this->discount_type === 'fixed') {
             return max(0, $totalAmount - $this->discount_value);

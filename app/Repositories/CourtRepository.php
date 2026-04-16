@@ -28,14 +28,22 @@ class CourtRepository extends BasicRepository
         }
 
         $date = $params['date'] ?? request()->get('date');
+        $dayOfWeek = $params['day_of_week'] ?? request()->get('day_of_week');
+        
+        $withRelations = ['courtPeakHours' => function($q) use ($dayOfWeek) {
+            if (isset($dayOfWeek)) {
+                $q->where('day_of_week', $dayOfWeek);
+            }
+        }];
+
         if (!empty($date)) {
-            $query->with(['bookings' => function ($q) use ($date) {
-                // only get active/confirmed bookings, assuming 'status' != 'cancelled'
+            $withRelations['bookings'] = function ($q) use ($date) {
                 $q->where('booking_date', $date)->where('status', '!=', 'cancelled');
-            }]);
+            };
         } else {
-            $query->with('bookings');
+            $withRelations[] = 'bookings';
         }
+        $query->with($withRelations);
 
         return $this->paging($query);
     }
@@ -45,14 +53,22 @@ class CourtRepository extends BasicRepository
         $query = $this->model->newQuery();
         
         $date = request()->get('date');
+        $dayOfWeek = request()->get('day_of_week');
+
+        $withRelations = ['courtPeakHours' => function($q) use ($dayOfWeek) {
+            if (isset($dayOfWeek)) {
+                $q->where('day_of_week', $dayOfWeek);
+            }
+        }];
+
         if (!empty($date)) {
-            $query->with(['bookings' => function ($q) use ($date) {
-                // only get active/confirmed bookings, assuming 'status' != 'cancelled'
+            $withRelations['bookings'] = function ($q) use ($date) {
                 $q->where('booking_date', $date)->where('status', '!=', 'cancelled');
-            }]);
+            };
         } else {
-            $query->with('bookings');
+            $withRelations[] = 'bookings';
         }
+        $query->with($withRelations);
 
         return $query->findOrFail($id);
     }

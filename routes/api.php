@@ -34,7 +34,7 @@ Route::prefix('user')->group(function () {
     Route::get('branches/{id}/courts', [\App\Http\Controllers\Api\User\BranchController::class, 'courts']);
     Route::post('bookings/book-court', [\App\Http\Controllers\Api\User\BookingController::class, 'bookCourt'])->middleware('auth:api');
     Route::apiResource('bookings', \App\Http\Controllers\Api\User\BookingController::class)->middleware('auth:api');
-    Route::apiResource('reviews', \App\Http\Controllers\Api\User\ReviewtController::class);
+    Route::apiResource('reviews', \App\Http\Controllers\Api\User\ReviewController::class)->middleware('auth:api');
     Route::apiResource('payments', \App\Http\Controllers\Api\User\PaymentController::class);
     Route::post('promotions/check-code', [\App\Http\Controllers\Api\User\PromotionController::class, 'checkCode']);
     Route::post('promotions/apply-code', [\App\Http\Controllers\Api\User\PromotionController::class, 'applyCode']);

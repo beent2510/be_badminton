@@ -22,5 +22,13 @@ class CourtPeakHourRepository extends BasicRepository
                     ->orWhere('to_time', 'like', "%{$keyword}%");
             });
         }
+
+        $courtId = $params['court_id'] ?? request()->get('court_id');
+        if (!empty($courtId)) {
+            $query->where('court_id', $courtId);
+        }
+
+        $query->with('court');
+        return $this->paging($query);
     }
 }

@@ -23,11 +23,21 @@ class CourtController extends Controller
     }
     public function store(Request $request)
     {
-        return $this->courtService->store($request->all());
+        $data = $request->except('image_url');
+        if ($request->hasFile('image_url')) {
+            $path = $request->file('image_url')->store('images', 'public');
+            $data['image_url'] = $path;
+        }
+        return $this->courtService->store($data);
     }
     public function update(Request $request, $id)
     {
-        return $this->courtService->update($id, $request->all());
+        $data = $request->except('image_url');
+        if ($request->hasFile('image_url')) {
+            $path = $request->file('image_url')->store('images', 'public');
+            $data['image_url'] = $path;
+        }
+        return $this->courtService->update($id, $data);
     }
     public function destroy($id)
     {

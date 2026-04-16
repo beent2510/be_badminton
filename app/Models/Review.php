@@ -11,10 +11,12 @@ class Review extends Model
     protected $fillable = [
         'court_id',
         'user_id',
+        'booking_id',
         'rating',
         'comment',
         'is_visible',
     ];
+    protected $with = ['user'];
     public function court()
     {
         return $this->belongsTo(Court::class);

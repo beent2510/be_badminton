@@ -15,7 +15,7 @@ class CourtScheduleController extends Controller
 
     public function index(Request $request)
     {
-        return $this->courtScheduleService->all($request->all());
+        return $this->courtScheduleService->search($request->all());
     }
 
     public function show($id)
