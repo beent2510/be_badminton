@@ -14,6 +14,13 @@ class BookingRepository extends BasicRepository
     {
         $query = $this->model->newQuery()->with(['court.branch']);
 
+        if (auth()->check() && auth()->user()->role === 'branch_admin') {
+            $branchIds = auth()->user()->branches()->pluck('id')->toArray();
+            $query->whereHas('court', function ($q) use ($branchIds) {
+                $q->whereIn('branch_id', $branchIds);
+            });
+        }
+
         if (isset($params['user_id'])) {
             $query->where('user_id', $params['user_id']);
         }
@@ -27,6 +34,20 @@ class BookingRepository extends BasicRepository
         }
 
         return $this->paging($query);
+    }
+
+    public function show($id)
+    {
+        $query = $this->model->newQuery()->with(['court.branch']);
+        
+        if (auth()->check() && auth()->user()->role === 'branch_admin') {
+            $branchIds = auth()->user()->branches()->pluck('id')->toArray();
+            $query->whereHas('court', function ($q) use ($branchIds) {
+                $q->whereIn('branch_id', $branchIds);
+            });
+        }
+
+        return $query->findOrFail($id);
     }
 
     public function isCourtAvailable($court_id, $booking_date, $start_time, $end_time)

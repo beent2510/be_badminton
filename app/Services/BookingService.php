@@ -81,6 +81,11 @@ class BookingService
         $data['promotion_id'] = $promotion_id;
 
         $booking = $this->bookingRepository->store($data);
+        
+        if ($promotion_id && isset($result['promotion'])) {
+            $result['promotion']->increment('usage_count');
+        }
+        
         return [
             'success' => true,
             'booking' => $booking,

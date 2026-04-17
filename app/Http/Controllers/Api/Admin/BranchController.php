@@ -22,14 +22,24 @@ class BranchController extends Controller
     }
     public function store(Request $request)
     {
-        return $this->branchService->store($request->all());
+        $data = $request->except('image_url');
+        if ($request->hasFile('image_url')) {
+            $path = $request->file('image_url')->store('images', 'public');
+            $data['image_url'] = $path;
+        }
+        return $this->branchService->store($data);
     }
     public function update(Request $request, $id)
     {
         if (!$this->branchService->show($id)) {
             return response()->json(['error' => 'Branch not found'], 404);
         }
-        return $this->branchService->update($id, $request->all());
+        $data = $request->except('image_url');
+        if ($request->hasFile('image_url')) {
+            $path = $request->file('image_url')->store('images', 'public');
+            $data['image_url'] = $path;
+        }
+        return $this->branchService->update($id, $data);
     }
     public function destroy($id)
     {

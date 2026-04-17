@@ -14,6 +14,11 @@ class CourtRepository extends BasicRepository
     {
         $query = $this->model->newQuery();
 
+        if (auth()->check() && auth()->user()->role === 'branch_admin') {
+            $branchIds = auth()->user()->branches()->pluck('id')->toArray();
+            $query->whereIn('branch_id', $branchIds);
+        }
+
         $keyword = $params['keyword'] ?? request()->get('keyword');
         if (!empty($keyword)) {
             $query->where(function ($q) use ($keyword) {
@@ -36,6 +41,14 @@ class CourtRepository extends BasicRepository
             }
         }];
 
+        $withRelations['schedules'] = function($q) use ($dayOfWeek) {
+            if (isset($dayOfWeek)) {
+                $q->where('day_of_week', $dayOfWeek)->where('is_active', true);
+            } else {
+                $q->where('is_active', true);
+            }
+        };
+
         if (!empty($date)) {
             $withRelations['bookings'] = function ($q) use ($date) {
                 $q->where('booking_date', $date)->where('status', '!=', 'cancelled');
@@ -52,6 +65,11 @@ class CourtRepository extends BasicRepository
     {
         $query = $this->model->newQuery();
         
+        if (auth()->check() && auth()->user()->role === 'branch_admin') {
+            $branchIds = auth()->user()->branches()->pluck('id')->toArray();
+            $query->whereIn('branch_id', $branchIds);
+        }
+        
         $date = request()->get('date');
         $dayOfWeek = request()->get('day_of_week');
 
@@ -60,6 +78,14 @@ class CourtRepository extends BasicRepository
                 $q->where('day_of_week', $dayOfWeek);
             }
         }];
+
+        $withRelations['schedules'] = function($q) use ($dayOfWeek) {
+            if (isset($dayOfWeek)) {
+                $q->where('day_of_week', $dayOfWeek)->where('is_active', true);
+            } else {
+                $q->where('is_active', true);
+            }
+        };
 
         if (!empty($date)) {
             $withRelations['bookings'] = function ($q) use ($date) {
@@ -75,12 +101,6 @@ class CourtRepository extends BasicRepository
 
     public function store($data)
     {
-       if (isset($data['image_url']) && $data['image_url'] instanceof \Illuminate\Http\UploadedFile) {
-        $path = $data['image_url']->store('images', 'public');
-        $data['image_url'] = $path;
-    } else {
-        $data['image_url'] = null;
-    }
         return parent::store($data);
     }
 }

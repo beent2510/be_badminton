@@ -14,13 +14,20 @@ class CourtScheduleRepository extends BasicRepository
     {
         $query = $this->model->newQuery();
 
+        if (auth()->check() && auth()->user()->role === 'branch_admin') {
+            $branchIds = auth()->user()->branches()->pluck('id')->toArray();
+            $query->whereHas('court', function ($q) use ($branchIds) {
+                $q->whereIn('branch_id', $branchIds);
+            });
+        }
+
         $courtId = $params['court_id'] ?? request()->get('court_id');
         if (!empty($courtId)) {
             $query->where('court_id', $courtId);
         }
 
          $dayOfWeek = $params['day_of_week'] ?? request()->get('day_of_week');
-        if (!empty($dayOfWeek)) {
+        if (!is_null($dayOfWeek) && $dayOfWeek !== '') {
             $query->where('day_of_week', $dayOfWeek);
         }
 

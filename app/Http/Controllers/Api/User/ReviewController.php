@@ -68,6 +68,9 @@ class ReviewController extends Controller
         ];
 
         $review = $this->reviewService->store($data);
+        
+        $booking->update(['review_id' => $review->id]);
+        
         return response()->json($review, 201);
     }
 

@@ -13,6 +13,7 @@ class Branch extends Model
         'name',
         'address',
         'phone_number',
+        'image_url',
     ];
     public function user()
     {
@@ -20,5 +21,9 @@ class Branch extends Model
     }
     public function courts(){
         return $this->hasMany(Court::class);
+    }
+    public function reviews()
+    {
+        return $this->hasManyThrough(Review::class, Court::class);
     }
 }

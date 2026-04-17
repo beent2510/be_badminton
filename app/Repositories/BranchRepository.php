@@ -14,6 +14,10 @@ class BranchRepository extends BasicRepository
     {
         $query = $this->model->newQuery();
 
+        if (auth()->check() && auth()->user()->role === 'branch_admin') {
+            $query->where('user_id', auth()->id());
+        }
+
         $keyword = $params['keyword'] ?? request()->get('keyword');
         if (!empty($keyword)) {
             $query->where(function ($q) use ($keyword) {
@@ -23,5 +27,18 @@ class BranchRepository extends BasicRepository
         }
 
         return $this->paging($query);
+    }
+
+    public function show($id)
+    {
+        $query = $this->model->with(['reviews' => function($q) {
+            $q->where('is_visible', true)->with('user')->latest();
+        }]);
+
+        if (auth()->check() && auth()->user()->role === 'branch_admin') {
+            $query->where('user_id', auth()->id());
+        }
+
+        return $query->findOrFail($id);
     }
 }

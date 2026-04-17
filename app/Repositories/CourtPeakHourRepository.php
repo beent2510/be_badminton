@@ -14,6 +14,13 @@ class CourtPeakHourRepository extends BasicRepository
     {
         $query = $this->model->newQuery();
 
+        if (auth()->check() && auth()->user()->role === 'branch_admin') {
+            $branchIds = auth()->user()->branches()->pluck('id')->toArray();
+            $query->whereHas('court', function ($q) use ($branchIds) {
+                $q->whereIn('branch_id', $branchIds);
+            });
+        }
+
         $keyword = $params['keyword'] ?? request()->get('keyword');
         if (!empty($keyword)) {
             $query->where(function ($q) use ($keyword) {
@@ -26,6 +33,11 @@ class CourtPeakHourRepository extends BasicRepository
         $courtId = $params['court_id'] ?? request()->get('court_id');
         if (!empty($courtId)) {
             $query->where('court_id', $courtId);
+        }
+
+        $dayOfWeek = $params['day_of_week'] ?? request()->get('day_of_week');
+        if (!is_null($dayOfWeek) && $dayOfWeek !== '') {
+            $query->where('day_of_week', $dayOfWeek);
         }
 
         $query->with('court');

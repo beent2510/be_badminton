@@ -18,7 +18,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::prefix('admin')->group(function () {
+Route::prefix('admin')->middleware('auth:api')->group(function () {
+    Route::apiResource('managers', \App\Http\Controllers\Api\Admin\ManagerController::class);
     Route::apiResource('courts', \App\Http\Controllers\Api\Admin\CourtController::class);
     Route::apiResource('branches', \App\Http\Controllers\Api\Admin\BranchController::class);
     Route::apiResource('court-schedules', \App\Http\Controllers\Api\Admin\CourtScheduleController::class);
