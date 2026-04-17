@@ -2,16 +2,39 @@
 namespace App\Repositories;
 
 use App\Core\BasicRepository;
+use App\Models\Booking;
 use App\Models\Court;
+use Carbon\Carbon;
 
 class CourtRepository extends BasicRepository
 {
+    private const PAYMENT_HOLD_MINUTES = 5;
+
     public function __construct(Court $court)
     {
         parent::__construct($court);
     }
+
+    private function expireStalePendingBookings(): void
+    {
+        $expireBefore = Carbon::now()->subMinutes(self::PAYMENT_HOLD_MINUTES);
+
+        Booking::query()
+            ->where('status', 'pending')
+            ->where('created_at', '<=', $expireBefore)
+            ->where(function ($q) {
+                $q->whereNull('payment_id')
+                    ->orWhereHas('payment', function ($p) {
+                        $p->where('payment_status', '!=', 'paid');
+                    });
+            })
+            ->update(['status' => 'cancelled']);
+    }
+
     public function search($params = [])
     {
+        $this->expireStalePendingBookings();
+
         $query = $this->model->newQuery();
 
         if (auth()->check() && auth()->user()->role === 'branch_admin') {
@@ -51,7 +74,15 @@ class CourtRepository extends BasicRepository
 
         if (!empty($date)) {
             $withRelations['bookings'] = function ($q) use ($date) {
-                $q->where('booking_date', $date)->where('status', '!=', 'cancelled');
+                $q->where('booking_date', $date)
+                    ->whereIn('status', ['confirmed', 'paid'])
+                    ->orWhere(function ($pendingPaid) use ($date) {
+                        $pendingPaid->where('booking_date', $date)
+                            ->where('status', 'pending')
+                            ->whereHas('payment', function ($p) {
+                                $p->where('payment_status', 'paid');
+                            });
+                    });
             };
         } else {
             $withRelations[] = 'bookings';
@@ -63,6 +94,8 @@ class CourtRepository extends BasicRepository
 
     public function show($id)
     {
+        $this->expireStalePendingBookings();
+
         $query = $this->model->newQuery();
         
         if (auth()->check() && auth()->user()->role === 'branch_admin') {
@@ -89,7 +122,15 @@ class CourtRepository extends BasicRepository
 
         if (!empty($date)) {
             $withRelations['bookings'] = function ($q) use ($date) {
-                $q->where('booking_date', $date)->where('status', '!=', 'cancelled');
+                $q->where('booking_date', $date)
+                    ->whereIn('status', ['confirmed', 'paid'])
+                    ->orWhere(function ($pendingPaid) use ($date) {
+                        $pendingPaid->where('booking_date', $date)
+                            ->where('status', 'pending')
+                            ->whereHas('payment', function ($p) {
+                                $p->where('payment_status', 'paid');
+                            });
+                    });
             };
         } else {
             $withRelations[] = 'bookings';

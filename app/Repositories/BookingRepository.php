@@ -3,16 +3,47 @@ namespace App\Repositories;
 
 use App\Core\BasicRepository;
 use App\Models\Booking;
+use Carbon\Carbon;
 
 class BookingRepository extends BasicRepository
 {
+    private const PAYMENT_HOLD_MINUTES = 5;
+
     public function __construct(Booking $booking)
     {
         parent::__construct($booking);
     }
+
+    public function expireStalePendingBookings(?int $userId = null): void
+    {
+        $expireBefore = Carbon::now()->subMinutes(self::PAYMENT_HOLD_MINUTES);
+
+        $query = $this->model->newQuery()
+            ->where('status', 'pending')
+            ->where('created_at', '<=', $expireBefore)
+            ->where(function ($q) {
+                $q->whereNull('payment_id')
+                    ->orWhereHas('payment', function ($p) {
+                        $p->where('payment_status', '!=', 'paid');
+                    });
+            });
+
+        if ($userId) {
+            $query->where('user_id', $userId);
+        }
+
+        $query->update(['status' => 'cancelled']);
+    }
+
     public function search($params = [])
     {
-        $query = $this->model->newQuery()->with(['court.branch']);
+        if (isset($params['user_id'])) {
+            $this->expireStalePendingBookings((int) $params['user_id']);
+        } else {
+            $this->expireStalePendingBookings();
+        }
+
+        $query = $this->model->newQuery()->with(['court.branch', 'payment']);
 
         if (auth()->check() && auth()->user()->role === 'branch_admin') {
             $branchIds = auth()->user()->branches()->pluck('id')->toArray();
@@ -33,12 +64,15 @@ class BookingRepository extends BasicRepository
             });
         }
 
+        // Newest bookings first for stable pagination order.
+        $query->orderByDesc('created_at')->orderByDesc('id');
+
         return $this->paging($query);
     }
 
     public function show($id)
     {
-        $query = $this->model->newQuery()->with(['court.branch']);
+        $query = $this->model->newQuery()->with(['court.branch', 'payment']);
         
         if (auth()->check() && auth()->user()->role === 'branch_admin') {
             $branchIds = auth()->user()->branches()->pluck('id')->toArray();
@@ -52,9 +86,19 @@ class BookingRepository extends BasicRepository
 
     public function isCourtAvailable($court_id, $booking_date, $start_time, $end_time)
     {
+        $this->expireStalePendingBookings();
+
         $exists = $this->model->where('court_id', $court_id)
             ->where('booking_date', $booking_date)
-            ->whereIn('status', ['pending', 'confirmed', 'paid'])
+            ->where(function ($q) {
+                $q->whereIn('status', ['confirmed', 'paid'])
+                    ->orWhere(function ($pendingPaid) {
+                        $pendingPaid->where('status', 'pending')
+                            ->whereHas('payment', function ($p) {
+                                $p->where('payment_status', 'paid');
+                            });
+                    });
+            })
             ->where(function($q) use ($start_time, $end_time) {
                 $q->where('start_time', '<', $end_time)
                   ->where('end_time', '>', $start_time);

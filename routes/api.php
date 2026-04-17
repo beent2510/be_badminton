@@ -37,10 +37,14 @@ Route::prefix('user')->group(function () {
     Route::apiResource('bookings', \App\Http\Controllers\Api\User\BookingController::class)->middleware('auth:api');
     Route::apiResource('reviews', \App\Http\Controllers\Api\User\ReviewController::class)->middleware('auth:api');
     Route::apiResource('payments', \App\Http\Controllers\Api\User\PaymentController::class);
+    Route::post('payments/zalopay/create', [\App\Http\Controllers\Api\User\PaymentController::class, 'createZalopayPayment'])->middleware('auth:api');
     Route::post('promotions/check-code', [\App\Http\Controllers\Api\User\PromotionController::class, 'checkCode']);
     Route::post('promotions/apply-code', [\App\Http\Controllers\Api\User\PromotionController::class, 'applyCode']);
     Route::apiResource('promotions', \App\Http\Controllers\Api\User\PromotionController::class);
 });
+
+Route::get('zalo_return', [\App\Http\Controllers\Api\User\PaymentController::class, 'zaloReturn']);
+Route::post('zalo_return', [\App\Http\Controllers\Api\User\PaymentController::class, 'zaloReturn']);
 
 Route::prefix('auth')->group(function () {
     Route::post('register', [\App\Http\Controllers\Api\AuthController::class, 'register']);

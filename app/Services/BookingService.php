@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Services;
+use Carbon\Carbon;
+use App\Models\Payment;
 use App\Repositories\BookingRepository;
 
 class BookingService
@@ -56,6 +58,22 @@ class BookingService
      */
     public function bookCourt(array $data, $promotionService = null)
     {
+        try {
+            $bookingStart = Carbon::parse(($data['booking_date'] ?? '') . ' ' . ($data['start_time'] ?? ''));
+        } catch (\Throwable $th) {
+            return [
+                'success' => false,
+                'message' => 'Thời gian đặt sân không hợp lệ',
+            ];
+        }
+
+        if ($bookingStart->lessThanOrEqualTo(Carbon::now())) {
+            return [
+                'success' => false,
+                'message' => 'Không thể đặt sân cho khung giờ đã qua',
+            ];
+        }
+
         // Kiểm tra sân trống
         if (!$this->isCourtAvailable($data['court_id'], $data['booking_date'], $data['start_time'], $data['end_time'])) {
             return [
@@ -79,6 +97,15 @@ class BookingService
         $data['discount_amount'] = $discount;
         $data['final_price'] = $final;
         $data['promotion_id'] = $promotion_id;
+
+        if (!empty($data['payment_id'])) {
+            $payment = Payment::find($data['payment_id']);
+            $data['status'] = ($payment && $payment->payment_status === 'paid')
+                ? 'confirmed'
+                : 'pending';
+        } else {
+            $data['status'] = 'pending';
+        }
 
         $booking = $this->bookingRepository->store($data);
         
