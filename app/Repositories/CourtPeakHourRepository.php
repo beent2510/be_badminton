@@ -35,6 +35,13 @@ class CourtPeakHourRepository extends BasicRepository
             $query->where('court_id', $courtId);
         }
 
+        $branchId = $params['branch_id'] ?? request()->get('branch_id');
+        if (!empty($branchId)) {
+            $query->whereHas('court', function ($q) use ($branchId) {
+                $q->where('branch_id', $branchId);
+            });
+        }
+
         $dayOfWeek = $params['day_of_week'] ?? request()->get('day_of_week');
         if (!is_null($dayOfWeek) && $dayOfWeek !== '') {
             $query->where('day_of_week', $dayOfWeek);
