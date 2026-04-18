@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
+    protected PaymentService $paymentService;
+
     public function __construct(PaymentService $paymentService)
     {
         $this->paymentService = $paymentService;
@@ -71,6 +73,16 @@ class PaymentController extends Controller
         $key1 = (string) ($config['key1'] ?? '');
         $endpoint = rtrim((string) ($config['endpoint'] ?? ''), '/');
         $returnUrl = (string) ($config['return_url'] ?? '');
+        $callbackUrl = (string) ($config['callback_url'] ?? '');
+
+        $hasLocalhostUrl = str_contains($returnUrl, 'localhost') || str_contains($returnUrl, '127.0.0.1')
+            || str_contains($callbackUrl, 'localhost') || str_contains($callbackUrl, '127.0.0.1');
+        if ($hasLocalhostUrl) {
+            Log::warning('ZaloPay create payment uses localhost URL. Sandbox callback/redirect may fail outside local machine.', [
+                'return_url' => $returnUrl,
+                'callback_url' => $callbackUrl,
+            ]);
+        }
 
         if (!$appId || !$key1 || !$endpoint || !$returnUrl) {
             return response()->json(['message' => 'Thiếu cấu hình ZaloPay'], 500);
@@ -102,6 +114,10 @@ class PaymentController extends Controller
             'bank_code' => '',
         ];
 
+        if (!empty($callbackUrl)) {
+            $order['callback_url'] = $callbackUrl;
+        }
+
         $macData = $order['app_id'] . '|' . $order['app_trans_id'] . '|' . $order['app_user'] . '|' . $order['amount']
             . '|' . $order['app_time'] . '|' . $order['embed_data'] . '|' . $order['item'];
         $order['mac'] = hash_hmac('sha256', $macData, $key1);
@@ -109,6 +125,15 @@ class PaymentController extends Controller
         try {
             $resp = Http::asForm()->post($endpointCreate, $order);
             $result = $resp->json();
+            Log::info('ZaloPay create payment response', [
+                'http_status' => $resp->status(),
+                'return_code' => $result['return_code'] ?? null,
+                'return_message' => $result['return_message'] ?? null,
+                'sub_return_code' => $result['sub_return_code'] ?? null,
+                'sub_return_message' => $result['sub_return_message'] ?? null,
+                'app_trans_id' => $appTransId,
+                'payment_id' => $payment->id,
+            ]);
         } catch (\Throwable $ex) {
             Log::error('ZaloPay create payment exception', ['error' => $ex->getMessage()]);
             return response()->json(['message' => 'Không thể kết nối ZaloPay'], 500);
@@ -134,6 +159,12 @@ class PaymentController extends Controller
     {
         $frontendUrl = trim((string) env('URL_ZALO_FRONTEND', 'http://localhost:5173/zalo_return'));
         $key2 = (string) config('zalopay.key2');
+
+        Log::info('ZaloPay return called', [
+            'method' => $request->method(),
+            'full_url' => $request->fullUrl(),
+            'ip' => $request->ip(),
+        ]);
 
         // Browser redirect from ZaloPay
         if ($request->isMethod('get')) {
@@ -162,11 +193,17 @@ class PaymentController extends Controller
         $postdatajson = json_decode($postdata, true);
 
         if (!is_array($postdatajson) || !isset($postdatajson['data'], $postdatajson['mac'])) {
+            Log::warning('ZaloPay callback invalid payload', [
+                'payload' => $postdata,
+            ]);
             return response()->json(['return_code' => -1, 'return_message' => 'invalid data']);
         }
 
         $mac = hash_hmac('sha256', $postdatajson['data'], $key2);
         if (strcmp($mac, $postdatajson['mac']) !== 0) {
+            Log::warning('ZaloPay callback invalid mac', [
+                'app_trans_id' => data_get(json_decode($postdatajson['data'], true), 'app_trans_id'),
+            ]);
             return response()->json(['return_code' => -1, 'return_message' => 'invalid mac']);
         }
 
@@ -182,6 +219,11 @@ class PaymentController extends Controller
                 $payment->update([
                     'payment_status' => $isSuccess ? 'paid' : 'failed',
                     'paid_at' => $isSuccess ? now() : null,
+                ]);
+                Log::info('ZaloPay callback payment updated', [
+                    'payment_id' => $paymentId,
+                    'status' => $isSuccess ? 'paid' : 'failed',
+                    'app_trans_id' => $appTransId,
                 ]);
             }
         }
