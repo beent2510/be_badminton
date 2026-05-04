@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Repositories;
 
 use App\Core\BasicRepository;
@@ -57,14 +58,14 @@ class CourtRepository extends BasicRepository
 
         $date = $params['date'] ?? request()->get('date');
         $dayOfWeek = $params['day_of_week'] ?? request()->get('day_of_week');
-        
-        $withRelations = ['courtPeakHours' => function($q) use ($dayOfWeek) {
+
+        $withRelations = ['courtPeakHours' => function ($q) use ($dayOfWeek) {
             if (isset($dayOfWeek)) {
                 $q->where('day_of_week', $dayOfWeek);
             }
         }];
 
-        $withRelations['schedules'] = function($q) use ($dayOfWeek) {
+        $withRelations['schedules'] = function ($q) use ($dayOfWeek) {
             if (isset($dayOfWeek)) {
                 $q->where('day_of_week', $dayOfWeek)->where('is_active', true);
             } else {
@@ -84,6 +85,18 @@ class CourtRepository extends BasicRepository
                             });
                     });
             };
+            $withRelations['bookingItems'] = function ($q) use ($date) {
+                $q->where('booking_date', $date)
+                    ->whereHas('booking', function ($b) {
+                        $b->whereIn('status', ['confirmed', 'paid'])
+                            ->orWhere(function ($pendingPaid) {
+                                $pendingPaid->where('status', 'pending')
+                                    ->whereHas('payment', function ($p) {
+                                        $p->where('payment_status', 'paid');
+                                    });
+                            });
+                    });
+            };
         } else {
             $withRelations[] = 'bookings';
         }
@@ -97,22 +110,22 @@ class CourtRepository extends BasicRepository
         $this->expireStalePendingBookings();
 
         $query = $this->model->newQuery();
-        
+
         if (auth()->check() && auth()->user()->role === 'branch_admin') {
             $branchIds = auth()->user()->branches()->pluck('id')->toArray();
             $query->whereIn('branch_id', $branchIds);
         }
-        
+
         $date = request()->get('date');
         $dayOfWeek = request()->get('day_of_week');
 
-        $withRelations = ['courtPeakHours' => function($q) use ($dayOfWeek) {
+        $withRelations = ['courtPeakHours' => function ($q) use ($dayOfWeek) {
             if (isset($dayOfWeek)) {
                 $q->where('day_of_week', $dayOfWeek);
             }
         }];
 
-        $withRelations['schedules'] = function($q) use ($dayOfWeek) {
+        $withRelations['schedules'] = function ($q) use ($dayOfWeek) {
             if (isset($dayOfWeek)) {
                 $q->where('day_of_week', $dayOfWeek)->where('is_active', true);
             } else {
@@ -129,6 +142,18 @@ class CourtRepository extends BasicRepository
                             ->where('status', 'pending')
                             ->whereHas('payment', function ($p) {
                                 $p->where('payment_status', 'paid');
+                            });
+                    });
+            };
+            $withRelations['bookingItems'] = function ($q) use ($date) {
+                $q->where('booking_date', $date)
+                    ->whereHas('booking', function ($b) {
+                        $b->whereIn('status', ['confirmed', 'paid'])
+                            ->orWhere(function ($pendingPaid) {
+                                $pendingPaid->where('status', 'pending')
+                                    ->whereHas('payment', function ($p) {
+                                        $p->where('payment_status', 'paid');
+                                    });
                             });
                     });
             };

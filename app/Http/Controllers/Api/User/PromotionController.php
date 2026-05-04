@@ -61,7 +61,13 @@ class PromotionController extends Controller
     {
         $code = $request->input('code');
         $total = $request->input('total');
-        $result = $this->promotionService->applyCode($code, $total);
+        $context = $request->only([
+            'total_hours',
+            'courts_count',
+            'has_peak_overlap',
+            'booking_purpose',
+        ]);
+        $result = $this->promotionService->applyCode($code, $total, $context);
         return response()->json($result);
     }
 }

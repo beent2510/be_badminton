@@ -14,6 +14,11 @@ class Booking extends Model
         'payment_id',
         'promotion_id',
         'review_id',
+        'customer_name',
+        'booking_type',
+        'booking_purpose',
+        'booking_mode',
+        'series_id',
         'booking_date',
         'start_time',
         'end_time',
@@ -21,7 +26,10 @@ class Booking extends Model
         'total_price',
         'note',
         'discount_amount',
-        'final_price'
+        'final_price',
+        'deposit_percent',
+        'deposit_amount',
+        'deposit_status'
     ];
     public function user()
     {
@@ -42,5 +50,15 @@ class Booking extends Model
     public function review()
     {
         return $this->belongsTo(Review::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(BookingItem::class);
+    }
+
+    public function series()
+    {
+        return $this->belongsTo(BookingSeries::class, 'series_id');
     }
 }

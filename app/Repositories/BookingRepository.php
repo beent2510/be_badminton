@@ -1,8 +1,11 @@
 <?php
+
 namespace App\Repositories;
 
 use App\Core\BasicRepository;
+use App\Models\BlockedTimeSlot;
 use App\Models\Booking;
+use App\Models\BookingItem;
 use Carbon\Carbon;
 
 class BookingRepository extends BasicRepository
@@ -43,12 +46,21 @@ class BookingRepository extends BasicRepository
             $this->expireStalePendingBookings();
         }
 
-        $query = $this->model->newQuery()->with(['court.branch', 'payment']);
+        $query = $this->model->newQuery()->with([
+            'court.branch',
+            'items.court.branch',
+            'payment',
+            'user',
+        ]);
 
         if (auth()->check() && auth()->user()->role === 'branch_admin') {
             $branchIds = auth()->user()->branches()->pluck('id')->toArray();
-            $query->whereHas('court', function ($q) use ($branchIds) {
-                $q->whereIn('branch_id', $branchIds);
+            $query->where(function ($q) use ($branchIds) {
+                $q->whereHas('court', function ($c) use ($branchIds) {
+                    $c->whereIn('branch_id', $branchIds);
+                })->orWhereHas('items.court', function ($c) use ($branchIds) {
+                    $c->whereIn('branch_id', $branchIds);
+                });
             });
         }
 
@@ -72,12 +84,21 @@ class BookingRepository extends BasicRepository
 
     public function show($id)
     {
-        $query = $this->model->newQuery()->with(['court.branch', 'payment']);
-        
+        $query = $this->model->newQuery()->with([
+            'court.branch',
+            'items.court.branch',
+            'payment',
+            'user',
+        ]);
+
         if (auth()->check() && auth()->user()->role === 'branch_admin') {
             $branchIds = auth()->user()->branches()->pluck('id')->toArray();
-            $query->whereHas('court', function ($q) use ($branchIds) {
-                $q->whereIn('branch_id', $branchIds);
+            $query->where(function ($q) use ($branchIds) {
+                $q->whereHas('court', function ($c) use ($branchIds) {
+                    $c->whereIn('branch_id', $branchIds);
+                })->orWhereHas('items.court', function ($c) use ($branchIds) {
+                    $c->whereIn('branch_id', $branchIds);
+                });
             });
         }
 
@@ -88,8 +109,31 @@ class BookingRepository extends BasicRepository
     {
         $this->expireStalePendingBookings();
 
-        $exists = $this->model->where('court_id', $court_id)
+        $blocked = BlockedTimeSlot::query()
             ->where('booking_date', $booking_date)
+            ->where('is_active', true)
+            ->where('start_time', '<', $end_time)
+            ->where('end_time', '>', $start_time)
+            ->exists();
+
+        if ($blocked) {
+            return false;
+        }
+
+        $exists = Booking::query()
+            ->where(function ($q) use ($court_id, $booking_date, $start_time, $end_time) {
+                $q->where(function ($slot) use ($court_id, $booking_date, $start_time, $end_time) {
+                    $slot->where('court_id', $court_id)
+                        ->where('booking_date', $booking_date)
+                        ->where('start_time', '<', $end_time)
+                        ->where('end_time', '>', $start_time);
+                })->orWhereHas('items', function ($itemQ) use ($court_id, $booking_date, $start_time, $end_time) {
+                    $itemQ->where('court_id', $court_id)
+                        ->where('booking_date', $booking_date)
+                        ->where('start_time', '<', $end_time)
+                        ->where('end_time', '>', $start_time);
+                });
+            })
             ->where(function ($q) {
                 $q->whereIn('status', ['confirmed', 'paid'])
                     ->orWhere(function ($pendingPaid) {
@@ -99,12 +143,8 @@ class BookingRepository extends BasicRepository
                             });
                     });
             })
-            ->where(function($q) use ($start_time, $end_time) {
-                $q->where('start_time', '<', $end_time)
-                  ->where('end_time', '>', $start_time);
-            })
             ->exists();
-            
+
         return !$exists;
     }
 }

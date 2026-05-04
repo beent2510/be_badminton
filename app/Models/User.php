@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Tymon\JWTAuth\Contracts\JWTSubject;
+
 class User extends Authenticatable implements JWTSubject
 {
     use HasApiTokens, HasFactory, Notifiable;
@@ -21,7 +22,7 @@ class User extends Authenticatable implements JWTSubject
         'name',
         'email',
         'password',
-        'phone',    
+        'phone',
         'avatar_url',
         'role',
         'is_active',
@@ -46,7 +47,7 @@ class User extends Authenticatable implements JWTSubject
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
-        public function getJWTIdentifier()
+    public function getJWTIdentifier()
     {
         return $this->getKey();
     }
@@ -74,5 +75,10 @@ class User extends Authenticatable implements JWTSubject
     public function bookings()
     {
         return $this->hasMany(Booking::class);
+    }
+
+    public function staffSchedules()
+    {
+        return $this->hasMany(StaffSchedule::class, 'staff_user_id');
     }
 }

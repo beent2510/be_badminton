@@ -32,6 +32,11 @@ class Court extends Model
     {
         return $this->hasMany(Booking::class);
     }
+
+    public function bookingItems()
+    {
+        return $this->hasMany(BookingItem::class);
+    }
     public function schedules()
     {
         return $this->hasMany(CourtSchedule::class);
