@@ -76,6 +76,54 @@ class BookingRepository extends BasicRepository
             });
         }
 
+        $courtId = $params['court_id'] ?? request()->get('court_id');
+        $bookingDate = $params['booking_date'] ?? request()->get('booking_date');
+        $startTime = $params['start_time'] ?? request()->get('start_time');
+        $endTime = $params['end_time'] ?? request()->get('end_time');
+
+        if (!empty($courtId)) {
+            $query->where(function ($q) use ($courtId) {
+                $q->where('court_id', $courtId)
+                    ->orWhereHas('items', function ($itemQ) use ($courtId) {
+                        $itemQ->where('court_id', $courtId);
+                    });
+            });
+        }
+
+        if (!empty($bookingDate) || !empty($startTime) || !empty($endTime)) {
+            $query->where(function ($q) use ($bookingDate, $startTime, $endTime) {
+                $q->where(function ($b) use ($bookingDate, $startTime, $endTime) {
+                    if (!empty($bookingDate)) {
+                        $b->where('booking_date', $bookingDate);
+                    }
+                    if (!empty($startTime) || !empty($endTime)) {
+                        $b->where(function ($t) use ($startTime, $endTime) {
+                            if (!empty($startTime)) {
+                                $t->where('end_time', '>', $startTime);
+                            }
+                            if (!empty($endTime)) {
+                                $t->where('start_time', '<', $endTime);
+                            }
+                        });
+                    }
+                })->orWhereHas('items', function ($itemQ) use ($bookingDate, $startTime, $endTime) {
+                    if (!empty($bookingDate)) {
+                        $itemQ->where('booking_date', $bookingDate);
+                    }
+                    if (!empty($startTime) || !empty($endTime)) {
+                        $itemQ->where(function ($t) use ($startTime, $endTime) {
+                            if (!empty($startTime)) {
+                                $t->where('end_time', '>', $startTime);
+                            }
+                            if (!empty($endTime)) {
+                                $t->where('start_time', '<', $endTime);
+                            }
+                        });
+                    }
+                });
+            });
+        }
+
         // Newest bookings first for stable pagination order.
         $query->orderByDesc('created_at')->orderByDesc('id');
 
