@@ -15,15 +15,25 @@ class ReportController extends Controller
             $branchIds = auth()->user()->branches()->pluck('id')->toArray();
         }
 
+        $from = $request->input('from');
+        $to = $request->input('to');
+
         $bookings = Booking::query()
             ->with(['items.court.branch', 'court.branch'])
-            ->where('status', 'paid')
+            ->whereIn('status', ['confirmed', 'paid'])
             ->get();
 
         $totals = [];
         foreach ($bookings as $booking) {
             if ($booking->items && $booking->items->count() > 0) {
                 foreach ($booking->items as $item) {
+                    if ($from && $item->booking_date < $from) {
+                        continue;
+                    }
+                    if ($to && $item->booking_date > $to) {
+                        continue;
+                    }
+
                     $branch = $item->court?->branch;
                     if (!$branch) {
                         continue;
@@ -42,6 +52,12 @@ class ReportController extends Controller
                     $totals[$branchId]['total_revenue'] += (float) ($item->total_price ?? 0);
                 }
             } elseif ($booking->court && $booking->court->branch) {
+                if ($from && $booking->booking_date < $from) {
+                    continue;
+                }
+                if ($to && $booking->booking_date > $to) {
+                    continue;
+                }
                 $branch = $booking->court->branch;
                 if ($branchIds && !in_array($branch->id, $branchIds, true)) {
                     continue;
@@ -68,9 +84,12 @@ class ReportController extends Controller
         if (auth()->check() && auth()->user()->role === 'branch_admin') {
             $branchIds = auth()->user()->branches()->pluck('id')->toArray();
         }
+
+        $from = $request->input('from');
+        $to = $request->input('to');
         $bookings = Booking::query()
             ->with(['items.court.branch', 'court.branch', 'user'])
-            ->where('status', 'paid')
+            ->whereIn('status', ['confirmed', 'paid'])
             ->get();
 
         $totals = [];
@@ -82,6 +101,13 @@ class ReportController extends Controller
 
             if ($booking->items && $booking->items->count() > 0) {
                 foreach ($booking->items as $item) {
+                    if ($from && $item->booking_date < $from) {
+                        continue;
+                    }
+                    if ($to && $item->booking_date > $to) {
+                        continue;
+                    }
+
                     $branch = $item->court?->branch;
                     if (!$branch) {
                         continue;
@@ -105,6 +131,12 @@ class ReportController extends Controller
                     $totals[$key]['total_revenue'] += (float) ($item->total_price ?? 0);
                 }
             } elseif ($booking->court && $booking->court->branch) {
+                if ($from && $booking->booking_date < $from) {
+                    continue;
+                }
+                if ($to && $booking->booking_date > $to) {
+                    continue;
+                }
                 $branch = $booking->court->branch;
                 if ($branchIds && !in_array($branch->id, $branchIds, true)) {
                     continue;
