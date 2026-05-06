@@ -197,7 +197,7 @@ class BookingService
                 if (!$this->isCourtAvailable($item['court_id'], $date, $item['start_time'], $item['end_time'])) {
                     return [
                         'success' => false,
-                        'message' => 'Sân đã được đặt trong khung giờ này',
+                        'message' => 'Sân đã được đặt trong khung giờ này (' . $date . ')',
                     ];
                 }
             }
